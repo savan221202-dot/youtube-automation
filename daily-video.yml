@@ -1,0 +1,42 @@
+name: Daily video generation
+
+# Runs automatically once a day, and can also be triggered manually
+# from the Actions tab on GitHub for testing.
+on:
+  schedule:
+    - cron: "30 3 * * *"   # 3:30 AM UTC = 9:00 AM IST daily — change as you like
+  workflow_dispatch: {}
+
+jobs:
+  generate-video:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+
+    steps:
+      - name: Check out repo
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+          # ffmpeg is already preinstalled on GitHub's ubuntu-latest runners
+
+      - name: Run pipeline
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: python3 run_pipeline.py --topics-file topics.txt
+
+      - name: Upload final video as artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: final-video-${{ github.run_number }}
+          path: final_video.mp4
+          retention-days: 14

@@ -1,0 +1,4 @@
+edge-tts
+google-generativeai
+pillow
+requests
