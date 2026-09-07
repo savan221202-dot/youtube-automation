@@ -10,7 +10,7 @@ official free automation API. This uses the underlying Gemini image model
 directly instead, which gives comparable quality and is genuinely scriptable.
 
 Setup:
-  pip install google-generativeai pillow
+  pip install google-genai pillow
   Free API key: https://aistudio.google.com/apikey (same key as generate_script.py)
   export GEMINI_API_KEY="your-key-here"
 
@@ -29,18 +29,21 @@ import sys
 import time
 from pathlib import Path
 
-import google.generativeai as genai
+from google import genai
 from PIL import Image
 
 MODEL_NAME = "gemini-2.5-flash-image"
 
 
-def generate_image(model, prompt, retries=4):
+def generate_image(client, prompt, retries=4):
     for attempt in range(retries):
         try:
-            response = model.generate_content(prompt)
+            response = client.models.generate_content(
+                model=MODEL_NAME,
+                contents=prompt,
+            )
             for part in response.candidates[0].content.parts:
-                if hasattr(part, "inline_data") and part.inline_data:
+                if part.inline_data is not None:
                     return Image.open(io.BytesIO(part.inline_data.data))
             raise RuntimeError("No image data in response")
         except Exception as e:
@@ -61,8 +64,7 @@ def main():
         print("Set GEMINI_API_KEY environment variable (free key from https://aistudio.google.com/apikey)")
         sys.exit(1)
 
-    genai.configure(api_key=api_key)
-    model = genai.GenerativeModel(MODEL_NAME)
+    client = genai.Client(api_key=api_key)
 
     data = json.loads(Path(args.script).read_text())
     out_dir = Path(args.output_dir)
@@ -73,7 +75,7 @@ def main():
         # Documentary look: photorealistic, cinematic, no text/watermarks
         full_prompt = f"{prompt}. Photorealistic, cinematic documentary style, 16:9, no text, no watermark."
         print(f"[{i+1}/{len(data['sections'])}] {prompt[:70]}")
-        image = generate_image(model, full_prompt)
+        image = generate_image(client, full_prompt)
         out_path = out_dir / f"{i:03d}.png"
         image.save(out_path)
 
