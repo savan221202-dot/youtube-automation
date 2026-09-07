@@ -4,7 +4,7 @@ generate_script.py — Given a topic (or a rotating topic list), generates a
 structured long-form video script using the free Gemini API.
 
 Setup:
-  pip install google-generativeai
+  pip install google-genai
   Get a free API key: https://aistudio.google.com/apikey
   export GEMINI_API_KEY="your-key-here"
 
@@ -33,7 +33,7 @@ import random
 import sys
 from pathlib import Path
 
-import google.generativeai as genai
+from google import genai
 
 PROMPT_TEMPLATE = """You are writing a script for a faceless long-form YouTube video (9-11 minutes spoken, ~1400-1700 words total) in the "{topic}" niche/topic. Write it in natural, conversational Hindi (Devanagari script), in the tone of a calm documentary narrator — measured, factual, slightly dramatic pacing, no filler words.
 
@@ -83,10 +83,12 @@ def main():
     topic = pick_topic(args)
     print(f"Topic: {topic}")
 
-    genai.configure(api_key=api_key)
-    model = genai.GenerativeModel("gemini-2.0-flash")
+    client = genai.Client(api_key=api_key)
 
-    response = model.generate_content(PROMPT_TEMPLATE.format(topic=topic))
+    response = client.models.generate_content(
+        model="gemini-2.0-flash",
+        contents=PROMPT_TEMPLATE.format(topic=topic),
+    )
     raw = response.text.strip()
 
     # Strip accidental markdown fences if the model adds them anyway
